@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>7-Segment Digital Display</title>
+<style>
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+
+body {
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%, #1a1a20 0%, #0a0a0d 70%);
+  color: #888;
+  font-family: -apple-system, system-ui, "Segoe UI", sans-serif;
+  padding: 48px;
+  margin: 0;
+  min-height: 100vh;
+}
+
+h2 {
+  font-weight: 400;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #555;
+  margin: 36px 0 14px;
+}
+
+/* ===== Panel ===== */
+.display {
+  display: inline-flex;
+  align-items: center;
+  padding: 22px 28px;
+  background:
+    linear-gradient(180deg, #18181d 0%, #08080b 100%);
+  border-radius: 14px;
+  box-shadow:
+    inset 0 1px 0   rgba(255,255,255,.05),
+    inset 0 0 0 1px rgba(255,255,255,.02),
+    inset 0 -2px 10px rgba(0,0,0,.7),
+    0 1px 0 rgba(255,255,255,.04),
+    0 16px 40px -10px rgba(0,0,0,.6);
+}
+
+</style>
+<link rel="stylesheet" type="text/css" media="all" href="digit.css">
+</head>
+<body>
+
+<h2>Clock — default (red)</h2>
+<div class="display lg">
+  <div class="digit" data-char="1"></div>
+  <div class="digit" data-char="2"></div>
+  <div class="colon blink"></div>
+  <div class="digit" data-char="3"></div>
+  <div class="digit" data-char="4"></div>
+  <div class="colon blink"></div>
+  <div class="digit" data-char="5"></div>
+  <div class="digit" data-char="6"></div>
+</div>
+
+<h2>Amber</h2>
+<div class="display amber">
+  <div class="digit" data-char="8"></div>
+  <div class="digit" data-char="8"></div>
+  <div class="colon"></div>
+  <div class="digit" data-char="8"></div>
+  <div class="digit" data-char="8"></div>
+</div>
+
+<h2>Cyan</h2>
+<div class="display cyan">
+  <div class="digit" data-char="C"></div>
+  <div class="digit" data-char="O"></div>
+  <div class="digit" data-char="D"></div>
+  <div class="digit" data-char="E"></div>
+</div>
+
+<h2>Green</h2>
+<div class="display green">
+  <div class="digit" data-char="H"></div>
+  <div class="digit" data-char="E"></div>
+  <div class="digit" data-char="L"></div>
+  <div class="digit" data-char="L"></div>
+  <div class="digit" data-char="O"></div>
+</div>
+
+<h2>Ice — small</h2>
+<div class="display ice sm">
+  <div class="digit" data-char="-"></div>
+  <div class="digit" data-char="2"></div>
+  <div class="digit" data-char="0"></div>
+  <div class="digit" data-char="2"></div>
+  <div class="digit" data-char="6"></div>
+</div>
+
+<h2>Hex 0-F</h2>
+<div class="display">
+  <div class="digit" data-char="0"></div>
+  <div class="digit" data-char="1"></div>
+  <div class="digit" data-char="2"></div>
+  <div class="digit" data-char="3"></div>
+  <div class="digit" data-char="4"></div>
+  <div class="digit" data-char="5"></div>
+  <div class="digit" data-char="6"></div>
+  <div class="digit" data-char="7"></div>
+  <div class="digit" data-char="8"></div>
+  <div class="digit" data-char="9"></div>
+  <div class="digit" data-char="A"></div>
+  <div class="digit" data-char="B"></div>
+  <div class="digit" data-char="C"></div>
+  <div class="digit" data-char="D"></div>
+  <div class="digit" data-char="E"></div>
+  <div class="digit" data-char="F"></div>
+</div>
+
+</body>
+</html>

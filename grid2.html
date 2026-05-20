@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Digit Grid (Tiled)</title>
+<link rel="stylesheet" href="digit.css">
+<style>
+  :root { color-scheme: dark; }
+  html, body { height: 100%; margin: 0; overflow: hidden; }
+  body {
+    background: radial-gradient(ellipse 90% 70% at 50% 50%, #15151a 0%, #06060a 80%);
+    font-family: -apple-system, system-ui, sans-serif;
+  }
+  #stage {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, 56px);
+    grid-auto-rows: 90px;
+    justify-content: center;
+    align-content: center;
+    gap: 8px 12px;
+  }
+  .cell { display: flex; justify-content: center; align-items: center; }
+</style>
+</head>
+<body>
+  <div id="stage"></div>
+
+<script>
+  const intervals = [
+    0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1,
+    2, 3, 4, 5, 6, 7, 8, 9, 10
+  ];
+  const themes = ['', 'amber', 'cyan', 'green', 'ice'];
+  const stage = document.getElementById('stage');
+
+  function build() {
+    stage.innerHTML = '';
+    const cols = Math.floor((window.innerWidth  - 24) / (56 + 12));
+    const rows = Math.floor((window.innerHeight - 24) / (90 + 8));
+    const total = cols * rows;
+
+    const digits = [];
+    for (let i = 0; i < total; i++) {
+      const sec = intervals[i % intervals.length];
+      const cell = document.createElement('div');
+      cell.className = 'cell display ' + themes[Math.floor(i / intervals.length) % themes.length];
+      const d = document.createElement('div');
+      d.className = 'digit';
+      d.dataset.char = '0';
+      cell.append(d);
+      stage.append(cell);
+      digits.push({ el: d, period: sec * 1000, next: sec * 1000, value: 0 });
+    }
+    return digits;
+  }
+
+  let digits = build();
+  let start = performance.now();
+
+  function loop(now) {
+    const t = now - start;
+    for (const d of digits) {
+      if (t >= d.next) {
+        d.value = (d.value + 1) % 10;
+        d.el.dataset.char = d.value;
+        d.next += d.period;
+      }
+    }
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      digits = build();
+      start = performance.now();
+    }, 150);
+  });
+</script>
+</body>
+</html>

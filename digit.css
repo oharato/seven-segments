@@ -1,0 +1,172 @@
+
+/* ===== Digit ===== */
+.digit {
+  /* hex-shape masks (defined once, reused) */
+  --mh: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 14' preserveAspectRatio='none'><path d='M7 0H93L100 7L93 14H7L0 7Z' fill='%23fff'/></svg>");
+  --mv: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 100' preserveAspectRatio='none'><path d='M7 0L14 7V93L7 100L0 93V7Z' fill='%23fff'/></svg>");
+
+  --on:  #ff3838;
+  --off: rgba(255, 56, 56, .06);
+  --glow-1: rgba(255, 56, 56, .55);
+  --glow-2: rgba(255, 30, 30, .3);
+
+  --a: var(--off); --b: var(--off); --c: var(--off);
+  --d: var(--off); --e: var(--off); --f: var(--off); --g: var(--off);
+
+  display: inline-block;
+  width: 44px;
+  height: 78px;
+  margin: 0 2px;
+  vertical-align: middle;
+  transform: skewX(-6deg);
+
+  background-image:
+    linear-gradient(var(--a), var(--a)),
+    linear-gradient(var(--b), var(--b)),
+    linear-gradient(var(--c), var(--c)),
+    linear-gradient(var(--d), var(--d)),
+    linear-gradient(var(--e), var(--e)),
+    linear-gradient(var(--f), var(--f)),
+    linear-gradient(var(--g), var(--g));
+  background-repeat: no-repeat;
+  background-position:
+    50% 0%, 100% 13.79%, 100% 86.21%,
+    50% 100%, 0% 86.21%, 0% 13.79%, 50% 50%;
+  background-size:
+    76% 8%, 8% 41%, 8% 41%,
+    76% 8%, 8% 41%, 8% 41%, 76% 8%;
+
+  -webkit-mask-image: var(--mh), var(--mv), var(--mv), var(--mh), var(--mv), var(--mv), var(--mh);
+          mask-image: var(--mh), var(--mv), var(--mv), var(--mh), var(--mv), var(--mv), var(--mh);
+  -webkit-mask-position:
+    50% 0%, 100% 13.79%, 100% 86.21%,
+    50% 100%, 0% 86.21%, 0% 13.79%, 50% 50%;
+          mask-position:
+    50% 0%, 100% 13.79%, 100% 86.21%,
+    50% 100%, 0% 86.21%, 0% 13.79%, 50% 50%;
+  -webkit-mask-size:
+    76% 8%, 8% 41%, 8% 41%,
+    76% 8%, 8% 41%, 8% 41%, 76% 8%;
+          mask-size:
+    76% 8%, 8% 41%, 8% 41%,
+    76% 8%, 8% 41%, 8% 41%, 76% 8%;
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+
+  filter:
+    drop-shadow(0 0 1px  var(--on))
+    drop-shadow(0 0 4px  var(--glow-1))
+    drop-shadow(0 0 12px var(--glow-2));
+}
+
+/* ===== Color themes ===== */
+.display.amber .digit {
+  --on: #ffb020;
+  --off: rgba(255, 176, 32, .05);
+  --glow-1: rgba(255, 176, 32, .55);
+  --glow-2: rgba(255, 140, 0, .3);
+}
+.display.cyan .digit {
+  --on: #20d4ff;
+  --off: rgba(32, 212, 255, .05);
+  --glow-1: rgba(32, 212, 255, .55);
+  --glow-2: rgba(0, 180, 255, .3);
+}
+.display.green .digit {
+  --on: #3fff70;
+  --off: rgba(63, 255, 112, .05);
+  --glow-1: rgba(63, 255, 112, .5);
+  --glow-2: rgba(40, 255, 80, .25);
+}
+.display.ice .digit {
+  --on: #e8f6ff;
+  --off: rgba(232, 246, 255, .05);
+  --glow-1: rgba(180, 220, 255, .55);
+  --glow-2: rgba(120, 180, 255, .3);
+}
+
+/* ===== Segment patterns ===== */
+.digit[data-char="0"]{--a:var(--on);--b:var(--on);--c:var(--on);--d:var(--on);--e:var(--on);--f:var(--on)}
+.digit[data-char="1"]{--b:var(--on);--c:var(--on)}
+.digit[data-char="2"]{--a:var(--on);--b:var(--on);--g:var(--on);--e:var(--on);--d:var(--on)}
+.digit[data-char="3"]{--a:var(--on);--b:var(--on);--g:var(--on);--c:var(--on);--d:var(--on)}
+.digit[data-char="4"]{--f:var(--on);--g:var(--on);--b:var(--on);--c:var(--on)}
+.digit[data-char="5"]{--a:var(--on);--f:var(--on);--g:var(--on);--c:var(--on);--d:var(--on)}
+.digit[data-char="6"]{--a:var(--on);--f:var(--on);--g:var(--on);--e:var(--on);--c:var(--on);--d:var(--on)}
+.digit[data-char="7"]{--a:var(--on);--b:var(--on);--c:var(--on)}
+.digit[data-char="8"]{--a:var(--on);--b:var(--on);--c:var(--on);--d:var(--on);--e:var(--on);--f:var(--on);--g:var(--on)}
+.digit[data-char="9"]{--a:var(--on);--b:var(--on);--c:var(--on);--d:var(--on);--f:var(--on);--g:var(--on)}
+
+.digit[data-char="A" i]{--a:var(--on);--b:var(--on);--c:var(--on);--e:var(--on);--f:var(--on);--g:var(--on)}
+.digit[data-char="B" i]{--c:var(--on);--d:var(--on);--e:var(--on);--f:var(--on);--g:var(--on)}
+.digit[data-char="C" i]{--a:var(--on);--d:var(--on);--e:var(--on);--f:var(--on)}
+.digit[data-char="D" i]{--b:var(--on);--c:var(--on);--d:var(--on);--e:var(--on);--g:var(--on)}
+.digit[data-char="E" i]{--a:var(--on);--d:var(--on);--e:var(--on);--f:var(--on);--g:var(--on)}
+.digit[data-char="F" i]{--a:var(--on);--e:var(--on);--f:var(--on);--g:var(--on)}
+.digit[data-char="G" i]{--a:var(--on);--c:var(--on);--d:var(--on);--e:var(--on);--f:var(--on)}
+.digit[data-char="H" i]{--b:var(--on);--c:var(--on);--e:var(--on);--f:var(--on);--g:var(--on)}
+.digit[data-char="I" i]{--e:var(--on);--f:var(--on)}
+.digit[data-char="J" i]{--b:var(--on);--c:var(--on);--d:var(--on);--e:var(--on)}
+.digit[data-char="L" i]{--d:var(--on);--e:var(--on);--f:var(--on)}
+.digit[data-char="N" i]{--c:var(--on);--e:var(--on);--g:var(--on)}
+.digit[data-char="O" i]{--c:var(--on);--d:var(--on);--e:var(--on);--g:var(--on)}
+.digit[data-char="P" i]{--a:var(--on);--b:var(--on);--e:var(--on);--f:var(--on);--g:var(--on)}
+.digit[data-char="Q" i]{--a:var(--on);--b:var(--on);--c:var(--on);--f:var(--on);--g:var(--on)}
+.digit[data-char="R" i]{--e:var(--on);--g:var(--on)}
+.digit[data-char="S" i]{--a:var(--on);--c:var(--on);--d:var(--on);--f:var(--on);--g:var(--on)}
+.digit[data-char="T" i]{--d:var(--on);--e:var(--on);--f:var(--on);--g:var(--on)}
+.digit[data-char="U" i]{--b:var(--on);--c:var(--on);--d:var(--on);--e:var(--on);--f:var(--on)}
+.digit[data-char="Y" i]{--b:var(--on);--c:var(--on);--d:var(--on);--f:var(--on);--g:var(--on)}
+.digit[data-char="-"]{--g:var(--on)}
+.digit[data-char="_"]{--d:var(--on)}
+
+/* ===== Colon separator ===== */
+.colon {
+  display: inline-block;
+  position: relative;
+  width: 14px;
+  height: 78px;
+  margin: 0 2px;
+  vertical-align: middle;
+  transform: skewX(-6deg);
+
+  --on:  #ff3838;
+  --glow-1: rgba(255, 56, 56, .55);
+  --glow-2: rgba(255, 30, 30, .3);
+
+  filter:
+    drop-shadow(0 0 1px  var(--on))
+    drop-shadow(0 0 4px  var(--glow-1))
+    drop-shadow(0 0 10px var(--glow-2));
+}
+.colon::before,
+.colon::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  background: var(--on);
+  border-radius: 50%;
+  transform: translateX(-50%);
+}
+.colon::before { top: 26%; }
+.colon::after  { top: 58%; }
+
+.display.amber .colon { --on:#ffb020; --glow-1:rgba(255,176,32,.55); --glow-2:rgba(255,140,0,.3); }
+.display.cyan  .colon { --on:#20d4ff; --glow-1:rgba(32,212,255,.55); --glow-2:rgba(0,180,255,.3); }
+.display.green .colon { --on:#3fff70; --glow-1:rgba(63,255,112,.5);  --glow-2:rgba(40,255,80,.25); }
+.display.ice   .colon { --on:#e8f6ff; --glow-1:rgba(180,220,255,.55);--glow-2:rgba(120,180,255,.3); }
+
+/* subtle blink on colon */
+.colon.blink::before,
+.colon.blink::after { animation: blink 1s steps(2) infinite; }
+@keyframes blink { 50% { opacity: .15; } }
+
+/* ===== Size variants ===== */
+.display.lg .digit { width: 64px; height: 112px; margin: 0 3px; }
+.display.lg .colon { width: 20px; height: 112px; }
+.display.lg .colon::before, .display.lg .colon::after { width: 10px; height: 10px; }
+.display.sm .digit { width: 30px; height: 54px; }
+.display.sm .colon { width: 10px; height: 54px; }
+.display.sm .colon::before, .display.sm .colon::after { width: 5px; height: 5px; }
