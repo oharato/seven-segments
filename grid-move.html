@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Digit Grid (Move)</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { height: 100%; margin: 0; overflow: hidden; background: #06060a; }
+  body {
+    font-family: -apple-system, system-ui, sans-serif;
+  }
+  #stage {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    display: block;
+  }
+  #controls {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: rgba(18, 18, 24, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 16px;
+    width: 200px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    z-index: 100;
+    user-select: none;
+    transition: background 0.3s ease, border-color 0.3s ease;
+  }
+  #controls:hover {
+    background: rgba(18, 18, 24, 0.85);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+  .control-group {
+    margin-bottom: 14px;
+  }
+  .control-group:last-child {
+    margin-bottom: 0;
+  }
+  .control-group label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #e0e0e6;
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 6px;
+    cursor: pointer;
+  }
+  .control-group label span {
+    letter-spacing: 0.03em;
+  }
+  #speed-slider, #count-slider, #depth-slider {
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    outline: none;
+    -webkit-appearance: none;
+    margin: 8px 0 4px 0;
+  }
+  #speed-slider::-webkit-slider-thumb, #count-slider::-webkit-slider-thumb, #depth-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #20d4ff;
+    box-shadow: 0 0 8px rgba(32, 212, 255, 0.8);
+    cursor: pointer;
+    transition: transform 0.1s ease;
+  }
+  #speed-slider::-webkit-slider-thumb:hover, #count-slider::-webkit-slider-thumb:hover, #depth-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+  }
+  #speed-slider::-moz-range-thumb, #count-slider::-moz-range-thumb, #depth-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border: none;
+    border-radius: 50%;
+    background: #20d4ff;
+    box-shadow: 0 0 8px rgba(32, 212, 255, 0.8);
+    cursor: pointer;
+    transition: transform 0.1s ease;
+  }
+  #speed-slider::-moz-range-thumb:hover, #count-slider::-moz-range-thumb:hover, #depth-slider::-moz-range-thumb:hover {
+    transform: scale(1.2);
+  }
+  #drift-toggle {
+    cursor: pointer;
+    position: relative;
+    width: 36px;
+    height: 20px;
+    -webkit-appearance: none;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    outline: none;
+    transition: background 0.3s ease;
+  }
+  #drift-toggle:checked {
+    background: #3fff70;
+    box-shadow: 0 0 8px rgba(63, 255, 112, 0.5);
+  }
+  #drift-toggle::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #ffffff;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  #drift-toggle:checked::before {
+    transform: translateX(16px);
+  }
+</style>
+</head>
+<body>
+  <canvas id="stage"></canvas>
+  <div id="controls">
+    <div class="control-group">
+      <label for="drift-toggle">
+        <span>自動ドリフト</span>
+        <input type="checkbox" id="drift-toggle" checked>
+      </label>
+    </div>
+    <div class="control-group">
+      <label for="speed-slider">
+        <span>スピード (<span id="speed-val">4.0</span>x)</span>
+      </label>
+      <input type="range" id="speed-slider" min="0.0" max="8.0" step="0.1" value="4.0">
+    </div>
+    <div class="control-group">
+      <label for="count-slider">
+        <span>数字の数 (<span id="count-val">800</span>)</span>
+      </label>
+      <input type="range" id="count-slider" min="100" max="1500" step="50" value="800">
+    </div>
+    <div class="control-group">
+      <label for="depth-slider">
+        <span>奥行き (<span id="depth-val">2500</span>)</span>
+      </label>
+      <input type="range" id="depth-slider" min="500" max="4500" step="100" value="2500">
+    </div>
+  </div>
+  
+  <script>
+    const themeColors = {
+      default: {
+        on: '#ff3838',
+        off: 'rgba(255, 56, 56, 0.06)',
+        glow1: 'rgba(255, 56, 56, 0.55)',
+        glow2: 'rgba(255, 30, 30, 0.3)'
+      },
+      amber: {
+        on: '#ffb020',
+        off: 'rgba(255, 176, 32, 0.05)',
+        glow1: 'rgba(255, 176, 32, 0.55)',
+        glow2: 'rgba(255, 140, 0, 0.3)'
+      },
+      cyan: {
+        on: '#20d4ff',
+        off: 'rgba(32, 212, 255, 0.05)',
+        glow1: 'rgba(32, 212, 255, 0.55)',
+        glow2: 'rgba(0, 180, 255, 0.3)'
+      },
+      green: {
+        on: '#3fff70',
+        off: 'rgba(63, 255, 112, 0.05)',
+        glow1: 'rgba(63, 255, 112, 0.5)',
+        glow2: 'rgba(40, 255, 80, 0.25)'
+      },
+      ice: {
+        on: '#e8f6ff',
+        off: 'rgba(232, 246, 255, 0.05)',
+        glow1: 'rgba(180, 220, 255, 0.55)',
+        glow2: 'rgba(120, 180, 255, 0.3)'
+      }
+    };
+    const themeNames = ['default', 'amber', 'cyan', 'green', 'ice'];
+
+    const segmentMap = {
+      '0': { a: true, b: true, c: true, d: true, e: true, f: true, g: false },
+      '1': { a: false, b: true, c: true, d: false, e: false, f: false, g: false },
+      '2': { a: true, b: true, c: false, d: true, e: true, f: false, g: true },
+      '3': { a: true, b: true, c: true, d: true, e: false, f: false, g: true },
+      '4': { a: false, b: true, c: true, d: false, e: false, f: true, g: true },
+      '5': { a: true, b: false, c: true, d: true, e: false, f: true, g: true },
+      '6': { a: true, b: false, c: true, d: true, e: true, f: true, g: true },
+      '7': { a: true, b: true, c: true, d: false, e: false, f: false, g: false },
+      '8': { a: true, b: true, c: true, d: true, e: true, f: true, g: true },
+      '9': { a: true, b: true, c: true, d: true, e: false, f: true, g: true }
+    };
+
+    const mainCanvas = document.getElementById('stage');
+    const mainCtx = mainCanvas.getContext('2d');
+    
+    // Fixed base size for cached textures
+    const baseW = 88;
+    const baseH = 156;
+    const glowMargin = 24;
+
+    const cache = {};
+    const digits = [];
+    const COUNT = 800; // Density of tunnel
+    let maxZ = 2500;
+    
+    let W = window.innerWidth;
+    let H = window.innerHeight;
+    
+    // Center point tracking with smooth easing
+    let mouseX = W / 2;
+    let mouseY = H / 2;
+    let targetX = mouseX;
+    let targetY = mouseY;
+    let isIdle = true;
+    let idleTimer;
+    let time = 0;
+
+    // Controls state and listeners
+    let speedMultiplier = 4.0;
+    let enableDrift = true;
+
+    const speedSlider = document.getElementById('speed-slider');
+    const speedVal = document.getElementById('speed-val');
+    const driftToggle = document.getElementById('drift-toggle');
+    const countSlider = document.getElementById('count-slider');
+    const countVal = document.getElementById('count-val');
+    const depthSlider = document.getElementById('depth-slider');
+    const depthVal = document.getElementById('depth-val');
+    
+    speedSlider.addEventListener('input', (e) => {
+      speedMultiplier = parseFloat(e.target.value);
+      speedVal.textContent = speedMultiplier.toFixed(1);
+    });
+    
+    driftToggle.addEventListener('change', (e) => {
+      enableDrift = e.target.checked;
+      if (!enableDrift) {
+        targetX = W / 2;
+        targetY = H / 2;
+      }
+    });
+
+    countSlider.addEventListener('input', (e) => {
+      const newCount = parseInt(e.target.value, 10);
+      countVal.textContent = newCount;
+      adjustDigitCount(newCount);
+    });
+
+    depthSlider.addEventListener('input', (e) => {
+      const newMaxZ = parseInt(e.target.value, 10);
+      depthVal.textContent = newMaxZ;
+      const oldMaxZ = maxZ;
+      maxZ = newMaxZ;
+      // Proportionally scale the z position of existing digits for instant feedback
+      for (const d of digits) {
+        d.z = (d.z / oldMaxZ) * maxZ;
+      }
+    });
+
+    function drawHexSegment(ctx, x, y, w_seg, h_seg, isVertical) {
+      ctx.beginPath();
+      if (!isVertical) {
+        const t = h_seg;
+        ctx.moveTo(x + t / 2, y);
+        ctx.lineTo(x + w_seg - t / 2, y);
+        ctx.lineTo(x + w_seg, y + t / 2);
+        ctx.lineTo(x + w_seg - t / 2, y + t);
+        ctx.lineTo(x + t / 2, y + t);
+        ctx.lineTo(x, y + t / 2);
+      } else {
+        const t = w_seg;
+        ctx.moveTo(x + t / 2, y);
+        ctx.lineTo(x + t, y + t / 2);
+        ctx.lineTo(x + t, y + h_seg - t / 2);
+        ctx.lineTo(x + t / 2, y + h_seg);
+        ctx.lineTo(x, y + h_seg - t / 2);
+        ctx.lineTo(x, y + t / 2);
+      }
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function preRenderAll(w, h) {
+      const dpr = window.devicePixelRatio || 1;
+      const canvasW = Math.ceil((w + glowMargin * 2) * dpr);
+      const canvasH = Math.ceil((h + glowMargin * 2) * dpr);
+
+      for (const tName of themeNames) {
+        cache[tName] = {};
+        const theme = themeColors[tName];
+        
+        for (let char = 0; char <= 9; char++) {
+          const canvas = document.createElement('canvas');
+          canvas.width = canvasW;
+          canvas.height = canvasH;
+          const ctx = canvas.getContext('2d');
+          
+          ctx.scale(dpr, dpr);
+          
+          // Apply skew transform around digit center
+          ctx.translate(glowMargin, glowMargin);
+          ctx.translate(w / 2, h / 2);
+          ctx.transform(1, 0, Math.tan(-6 * Math.PI / 180), 1, 0, 0);
+          ctx.translate(-w / 2, -h / 2);
+          
+          const activeMap = segmentMap[char];
+          const segments = [
+            { name: 'a', isVert: false, x: 0.12 * w, y: 0, ws: 0.76 * w, hs: 0.08 * h },
+            { name: 'b', isVert: true, x: 0.92 * w, y: 0.0814 * h, ws: 0.08 * w, hs: 0.41 * h },
+            { name: 'c', isVert: true, x: 0.92 * w, y: 0.5086 * h, ws: 0.08 * w, hs: 0.41 * h },
+            { name: 'd', isVert: false, x: 0.12 * w, y: 0.92 * h, ws: 0.76 * w, hs: 0.08 * h },
+            { name: 'e', isVert: true, x: 0, y: 0.5086 * h, ws: 0.08 * w, hs: 0.41 * h },
+            { name: 'f', isVert: true, x: 0, y: 0.0814 * h, ws: 0.08 * w, hs: 0.41 * h },
+            { name: 'g', isVert: false, x: 0.12 * w, y: 0.46 * h, ws: 0.76 * w, hs: 0.08 * h }
+          ];
+          
+          // 1. Inactive segments
+          ctx.shadowColor = 'transparent';
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = theme.off;
+          for (const s of segments) {
+            if (!activeMap[s.name]) {
+              drawHexSegment(ctx, s.x, s.y, s.ws, s.hs, s.isVert);
+            }
+          }
+          
+          // 2. Active segments (layered glow effect)
+          // Glow 2: Wide blur
+          ctx.shadowColor = theme.glow2;
+          ctx.shadowBlur = 12;
+          ctx.fillStyle = theme.on;
+          for (const s of segments) {
+            if (activeMap[s.name]) {
+              drawHexSegment(ctx, s.x, s.y, s.ws, s.hs, s.isVert);
+            }
+          }
+          
+          // Glow 1: Medium blur
+          ctx.shadowColor = theme.glow1;
+          ctx.shadowBlur = 4;
+          for (const s of segments) {
+            if (activeMap[s.name]) {
+              drawHexSegment(ctx, s.x, s.y, s.ws, s.hs, s.isVert);
+            }
+          }
+          
+          // Glow core: Small blur
+          ctx.shadowColor = theme.on;
+          ctx.shadowBlur = 1;
+          for (const s of segments) {
+            if (activeMap[s.name]) {
+              drawHexSegment(ctx, s.x, s.y, s.ws, s.hs, s.isVert);
+            }
+          }
+          
+          // Solid crisp core
+          ctx.shadowColor = 'transparent';
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = theme.on;
+          for (const s of segments) {
+            if (activeMap[s.name]) {
+              drawHexSegment(ctx, s.x, s.y, s.ws, s.hs, s.isVert);
+            }
+          }
+          
+          cache[tName][char] = canvas;
+        }
+      }
+    }
+
+    function initDigit(d, isInit = false) {
+      d.z = isInit ? Math.random() * maxZ : maxZ;
+      // Position relative to screen dimensions to ensure uniform distribution
+      d.x = (Math.random() - 0.5) * W * 3.5;
+      d.y = (Math.random() - 0.5) * H * 3.5;
+      d.theme = themeNames[Math.floor(Math.random() * themeNames.length)];
+      d.value = Math.floor(Math.random() * 10);
+      d.speed = Math.random() * 0.12 + 0.12; // units per ms
+      d.period = Math.random() * 2000 + 400; // ms
+      d.nextChange = performance.now() + Math.random() * d.period;
+    }
+
+    function adjustDigitCount(newCount) {
+      if (newCount > digits.length) {
+        const diff = newCount - digits.length;
+        for (let i = 0; i < diff; i++) {
+          const d = {};
+          initDigit(d, true);
+          d.z = Math.random() * maxZ;
+          digits.push(d);
+        }
+      } else if (newCount < digits.length) {
+        digits.length = newCount;
+      }
+    }
+
+    function resize() {
+      W = window.innerWidth;
+      H = window.innerHeight;
+      const dpr = window.devicePixelRatio || 1;
+      
+      mainCanvas.width = W * dpr;
+      mainCanvas.height = H * dpr;
+      mainCanvas.style.width = W + 'px';
+      mainCanvas.style.height = H + 'px';
+      
+      mainCtx.resetTransform();
+      mainCtx.scale(dpr, dpr);
+      
+      // Re-initialize particles to scale to new screen boundaries
+      if (digits.length === 0) {
+        for (let i = 0; i < COUNT; i++) {
+          const d = {};
+          initDigit(d, true);
+          // Distribute initial Z values evenly to avoid clumps
+          d.z = (i / COUNT) * maxZ;
+          digits.push(d);
+        }
+      }
+    }
+
+    // Pre-render textures at fixed high resolution
+    preRenderAll(baseW, baseH);
+    resize();
+
+    let lastTime = performance.now();
+    let start = performance.now();
+
+    function loop(now) {
+      const dt = now - lastTime;
+      lastTime = now;
+      time += 0.005;
+
+      // Mouse interactive drift
+      if (isIdle && enableDrift) {
+        targetX = W / 2 + Math.cos(time * 1.5) * (W * 0.22);
+        targetY = H / 2 + Math.sin(time * 2.2) * (H * 0.18);
+      } else if (isIdle && !enableDrift) {
+        targetX = W / 2;
+        targetY = H / 2;
+      }
+      mouseX += (targetX - mouseX) * 0.06;
+      mouseY += (targetY - mouseY) * 0.06;
+
+      // Motion blur trail effect (very premium feeling)
+      mainCtx.fillStyle = 'rgba(6, 6, 10, 0.22)';
+      mainCtx.fillRect(0, 0, W, H);
+
+      // Draw depth-sorted digits (back to front)
+      // Sort digits from deepest (largest z) to closest (smallest z)
+      digits.sort((a, b) => b.z - a.z);
+
+      const focalLength = W * 0.45; // Depth perspective constant
+      const dw_gm = baseW + glowMargin * 2;
+      const dh_gm = baseH + glowMargin * 2;
+
+      for (const d of digits) {
+        // Move towards viewer
+        d.z -= d.speed * dt * speedMultiplier;
+        
+        // Randomly update digits value
+        if (now >= d.nextChange) {
+          d.value = (d.value + 1) % 10;
+          d.nextChange = now + d.period;
+        }
+
+        // Reset if passed viewer
+        if (d.z <= 12) {
+          initDigit(d);
+          continue;
+        }
+
+        // Project 3D coordinates onto 2D screen
+        const scale = focalLength / d.z;
+        const screenX = mouseX + d.x * scale - (baseW * scale) / 2;
+        const screenY = mouseY + d.y * scale - (baseH * scale) / 2;
+
+        // Skip drawing if completely off-screen to optimize clipping
+        const sizeW = dw_gm * scale;
+        const sizeH = dh_gm * scale;
+        if (
+          screenX + sizeW < 0 ||
+          screenX - sizeW > W ||
+          screenY + sizeH < 0 ||
+          screenY - sizeH > H
+        ) {
+          continue;
+        }
+
+        // Calculate opacity based on Z depth (fade in from back, fade out at front)
+        let alpha = 1.0;
+        if (d.z > maxZ * 0.8) {
+          alpha = (maxZ - d.z) / (maxZ * 0.2); // Fade in at depth
+        } else if (d.z < 200) {
+          alpha = (d.z - 12) / 188; // Fade out near screen
+        }
+        alpha = Math.max(0, Math.min(1, alpha));
+
+        // Draw cached digit texture
+        mainCtx.globalAlpha = alpha;
+        const preRendered = cache[d.theme][d.value];
+        
+        // Draw centered accounting for the glow margin
+        mainCtx.drawImage(
+          preRendered,
+          screenX - glowMargin * scale,
+          screenY - glowMargin * scale,
+          dw_gm * scale,
+          dh_gm * scale
+        );
+      }
+      mainCtx.globalAlpha = 1.0;
+
+      requestAnimationFrame(loop);
+    }
+
+    requestAnimationFrame(loop);
+
+    // Mouse and touch interaction listeners
+    window.addEventListener('mousemove', (e) => {
+      isIdle = false;
+      targetX = e.clientX;
+      targetY = e.clientY;
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        isIdle = true;
+      }, 4000);
+    });
+
+    window.addEventListener('touchmove', (e) => {
+      isIdle = false;
+      if (e.touches.length > 0) {
+        targetX = e.touches[0].clientX;
+        targetY = e.touches[0].clientY;
+      }
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        isIdle = true;
+      }, 4000);
+    });
+
+    window.addEventListener('resize', () => {
+      resize();
+    });
+  </script>
+</body>
+</html>
