@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Digit Grid (Fast)</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { height: 100%; margin: 0; overflow: hidden; background: #06060a; }
+  body {
+    background: radial-gradient(ellipse 90% 70% at 50% 50%, #15151a 0%, #06060a 80%);
+    font-family: -apple-system, system-ui, sans-serif;
+  }
+  #stage {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    display: block;
+  }
+</style>
+</head>
+<body>
+  <canvas id="stage"></canvas>
+  
+  <script>
+    const themeColors = {
+      default: {
+        on: '#ff3838',
+        off: 'rgba(255, 56, 56, 0.06)',
+        glow1: 'rgba(255, 56, 56, 0.55)',
+        glow2: 'rgba(255, 30, 30, 0.3)'
+      },
+      amber: {
+        on: '#ffb020',
+        off: 'rgba(255, 176, 32, 0.05)',
+        glow1: 'rgba(255, 176, 32, 0.55)',
+        glow2: 'rgba(255, 140, 0, 0.3)'
+      },
+      cyan: {
+        on: '#20d4ff',
+        off: 'rgba(32, 212, 255, 0.05)',
+        glow1: 'rgba(32, 212, 255, 0.55)',
+        glow2: 'rgba(0, 180, 255, 0.3)'
+      },
+      green: {
+        on: '#3fff70',
+        off: 'rgba(63, 255, 112, 0.05)',
+        glow1: 'rgba(63, 255, 112, 0.5)',
+        glow2: 'rgba(40, 255, 80, 0.25)'
+      },
+      ice: {
+        on: '#e8f6ff',
+        off: 'rgba(232, 246, 255, 0.05)',
+        glow1: 'rgba(180, 220, 255, 0.55)',
+        glow2: 'rgba(120, 180, 255, 0.3)'
+      }
+    };
+    const themeNames = ['default', 'amber', 'cyan', 'green', 'ice'];
+
+    const segmentMap = {
+      '0': { a: true, b: true, c: true, d: true, e: true, f: true, g: false },
+      '1': { a: false, b: true, c: true, d: false, e: false, f: false, g: false },
+      '2': { a: true, b: true, c: false, d: true, e: true, f: false, g: true },
+      '3': { a: true, b: true, c: true, d: true, e: false, f: false, g: true },
+      '4': { a: false, b: true, c: true, d: false, e: false, f: true, g: true },
+      '5': { a: true, b: false, c: true, d: true, e: false, f: true, g: true },
+      '6': { a: true, b: false, c: true, d: true, e: true, f: true, g: true },
+      '7': { a: true, b: true, c: true, d: false, e: false, f: false, g: false },
+      '8': { a: true, b: true, c: true, d: true, e: true, f: true, g: true },
+      '9': { a: true, b: true, c: true, d: true, e: false, f: true, g: true }
+    };
+
+    const mainCanvas = document.getElementById('stage');
+    const mainCtx = mainCanvas.getContext('2d');
+    
+    const padding = 16;
+    const cellPaddingX = 6;
+    const cellPaddingY = 4;
+    const glowMargin = 20;
+
+    let cols = 0, rows = 0;
+    let cellWidth = 0, cellHeight = 0;
+    let digitWidth = 0, digitHeight = 0;
+    let digits = [];
+    const cache = {};
+    let needsRedraw = true;
+
+    function drawHexSegment(ctx, x, y, w_seg, h_seg, isVertical) {
+      ctx.beginPath();
+      if (!isVertical) {
+        const t = h_seg;
+        ctx.moveTo(x + t / 2, y);
+        ctx.lineTo(x + w_seg - t / 2, y);
+        ctx.lineTo(x + w_seg, y + t / 2);
+        ctx.lineTo(x + w_seg - t / 2, y + t);
+        ctx.lineTo(x + t / 2, y + t);
+        ctx.lineTo(x, y + t / 2);
+      } else {
+        const t = w_seg;
+        ctx.moveTo(x + t / 2, y);
+        ctx.lineTo(x + t, y + t / 2);
+        ctx.lineTo(x + t, y + h_seg - t / 2);
+        ctx.lineTo(x + t / 2, y + h_seg);
+        ctx.lineTo(x, y + h_seg - t / 2);
+        ctx.lineTo(x, y + t / 2);
+      }
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function preRenderAll(w, h) {
+      const dpr = window.devicePixelRatio || 1;
+      const canvasW = Math.ceil((w + glowMargin * 2) * dpr);
+      const canvasH = Math.ceil((h + glowMargin * 2) * dpr);
+
+      for (const tName of themeNames) {
+        cache[tName] = {};
+        const theme = themeColors[tName];
+        
+        for (let char = 0; char <= 9; char++) {
+          const canvas = document.createElement('canvas');
+          canvas.width = canvasW;
+          canvas.height = canvasH;
+          const ctx = canvas.getContext('2d');
+          
+          ctx.scale(dpr, dpr);
+          
+          // Apply skew transform around digit center
+          ctx.translate(glowMargin, glowMargin);
+          ctx.translate(w / 2, h / 2);
+          ctx.transform(1, 0, Math.tan(-6 * Math.PI / 180), 1, 0, 0);
+          ctx.translate(-w / 2, -h / 2);
+          
+          const activeMap = segmentMap[char];
+          const segments = [
+            { name: 'a', isVert: false, x: 0.12 * w, y: 0, ws: 0.76 * w, hs: 0.08 * h },
+            { name: 'b', isVert: true, x: 0.92 * w, y: 0.0814 * h, ws: 0.08 * w, hs: 0.41 * h },
+            { name: 'c', isVert: true, x: 0.92 * w, y: 0.5086 * h, ws: 0.08 * w, hs: 0.41 * h },
+            { name: 'd', isVert: false, x: 0.12 * w, y: 0.92 * h, ws: 0.76 * w, hs: 0.08 * h },
+            { name: 'e', isVert: true, x: 0, y: 0.5086 * h, ws: 0.08 * w, hs: 0.41 * h },
+            { name: 'f', isVert: true, x: 0, y: 0.0814 * h, ws: 0.08 * w, hs: 0.41 * h },
+            { name: 'g', isVert: false, x: 0.12 * w, y: 0.46 * h, ws: 0.76 * w, hs: 0.08 * h }
+          ];
+          
+          // 1. Draw inactive segments (no shadow)
+          ctx.shadowColor = 'transparent';
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = theme.off;
+          for (const s of segments) {
+            if (!activeMap[s.name]) {
+              drawHexSegment(ctx, s.x, s.y, s.ws, s.hs, s.isVert);
+            }
+          }
+          
+          // 2. Draw active segments (layer multiple shadows for realistic glow)
+          // Glow 2: Large diffuse glow
+          ctx.shadowColor = theme.glow2;
+          ctx.shadowBlur = 12;
+          ctx.fillStyle = theme.on;
+          for (const s of segments) {
+            if (activeMap[s.name]) {
+              drawHexSegment(ctx, s.x, s.y, s.ws, s.hs, s.isVert);
+            }
+          }
+          
+          // Glow 1: Medium bright glow
+          ctx.shadowColor = theme.glow1;
+          ctx.shadowBlur = 4;
+          for (const s of segments) {
+            if (activeMap[s.name]) {
+              drawHexSegment(ctx, s.x, s.y, s.ws, s.hs, s.isVert);
+            }
+          }
+          
+          // Glow core: Crisp near shadow
+          ctx.shadowColor = theme.on;
+          ctx.shadowBlur = 1;
+          for (const s of segments) {
+            if (activeMap[s.name]) {
+              drawHexSegment(ctx, s.x, s.y, s.ws, s.hs, s.isVert);
+            }
+          }
+          
+          // Solid crisp core
+          ctx.shadowColor = 'transparent';
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = theme.on;
+          for (const s of segments) {
+            if (activeMap[s.name]) {
+              drawHexSegment(ctx, s.x, s.y, s.ws, s.hs, s.isVert);
+            }
+          }
+          
+          cache[tName][char] = canvas;
+        }
+      }
+    }
+
+    function resize() {
+      const W = window.innerWidth;
+      const H = window.innerHeight;
+      const dpr = window.devicePixelRatio || 1;
+      
+      mainCanvas.width = W * dpr;
+      mainCanvas.height = H * dpr;
+      mainCanvas.style.width = W + 'px';
+      mainCanvas.style.height = H + 'px';
+      
+      mainCtx.resetTransform();
+      mainCtx.scale(dpr, dpr);
+      
+      const availableW = W - padding * 2;
+      const availableH = H - padding * 2;
+      
+      cols = Math.max(1, Math.round(availableW / 44));
+      rows = Math.max(1, Math.round(availableH / 78));
+      
+      cellWidth = availableW / cols;
+      cellHeight = availableH / rows;
+      
+      digitWidth = cellWidth - cellPaddingX * 2;
+      digitHeight = cellHeight - cellPaddingY * 2;
+      
+      preRenderAll(digitWidth, digitHeight);
+      
+      const total = cols * rows;
+      const nextDigits = [];
+      const now = performance.now();
+      for (let i = 0; i < total; i++) {
+        const sec = Math.random() * (10 - 0.1) + 0.1;
+        const theme = themeNames[i % themeNames.length];
+        
+        let val = 0;
+        if (digits[i]) {
+          val = digits[i].value;
+        } else {
+          val = Math.floor(Math.random() * 10);
+        }
+        nextDigits.push({
+          theme: theme,
+          period: sec * 1000,
+          next: now + sec * 1000,
+          value: val
+        });
+      }
+      digits = nextDigits;
+      needsRedraw = true;
+    }
+
+    let start = performance.now();
+    
+    function loop(now) {
+      const t = now - start;
+      
+      // Update digits state
+      let anyChanged = false;
+      for (const d of digits) {
+        if (t >= d.next) {
+          const periodsPassed = Math.floor((t - d.next) / d.period) + 1;
+          d.value = (d.value + periodsPassed) % 10;
+          d.next += periodsPassed * d.period;
+          anyChanged = true;
+        }
+      }
+      
+      if (anyChanged) {
+        needsRedraw = true;
+      }
+      
+      // Paint only if state changed (saves battery/GPU cycle)
+      if (needsRedraw) {
+        mainCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+        
+        const dw_gm = digitWidth + glowMargin * 2;
+        const dh_gm = digitHeight + glowMargin * 2;
+        
+        for (let i = 0; i < digits.length; i++) {
+          const d = digits[i];
+          const col = i % cols;
+          const row = Math.floor(i / cols);
+          
+          const cellX = padding + col * cellWidth;
+          const cellY = padding + row * cellHeight;
+          
+          const digitX = cellX + cellPaddingX - glowMargin;
+          const digitY = cellY + cellPaddingY - glowMargin;
+          
+          const preRendered = cache[d.theme][d.value];
+          mainCtx.drawImage(preRendered, digitX, digitY, dw_gm, dh_gm);
+        }
+        needsRedraw = false;
+      }
+      
+      requestAnimationFrame(loop);
+    }
+
+    // Initialize
+    resize();
+    requestAnimationFrame(loop);
+
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        resize();
+        start = performance.now();
+      }, 150);
+    });
+  </script>
+</body>
+</html>
