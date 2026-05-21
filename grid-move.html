@@ -90,7 +90,7 @@
   #speed-slider::-moz-range-thumb:hover, #count-slider::-moz-range-thumb:hover, #depth-slider::-moz-range-thumb:hover {
     transform: scale(1.2);
   }
-  #drift-toggle {
+  #drift-toggle, #reverse-toggle {
     cursor: pointer;
     position: relative;
     width: 36px;
@@ -105,7 +105,11 @@
     background: #3fff70;
     box-shadow: 0 0 8px rgba(63, 255, 112, 0.5);
   }
-  #drift-toggle::before {
+  #reverse-toggle:checked {
+    background: #20d4ff;
+    box-shadow: 0 0 8px rgba(32, 212, 255, 0.5);
+  }
+  #drift-toggle::before, #reverse-toggle::before {
     content: '';
     position: absolute;
     top: 2px;
@@ -116,7 +120,7 @@
     background: #ffffff;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  #drift-toggle:checked::before {
+  #drift-toggle:checked::before, #reverse-toggle:checked::before {
     transform: translateX(16px);
   }
 </style>
@@ -128,6 +132,12 @@
       <label for="drift-toggle">
         <span>自動ドリフト</span>
         <input type="checkbox" id="drift-toggle" checked>
+      </label>
+    </div>
+    <div class="control-group">
+      <label for="reverse-toggle">
+        <span>方向逆転</span>
+        <input type="checkbox" id="reverse-toggle">
       </label>
     </div>
     <div class="control-group">
@@ -226,10 +236,12 @@
     // Controls state and listeners
     let speedMultiplier = 4.0;
     let enableDrift = true;
+    let reverseDirection = false;
 
     const speedSlider = document.getElementById('speed-slider');
     const speedVal = document.getElementById('speed-val');
     const driftToggle = document.getElementById('drift-toggle');
+    const reverseToggle = document.getElementById('reverse-toggle');
     const countSlider = document.getElementById('count-slider');
     const countVal = document.getElementById('count-val');
     const depthSlider = document.getElementById('depth-slider');
@@ -245,6 +257,16 @@
       if (!enableDrift) {
         targetX = W / 2;
         targetY = H / 2;
+      }
+    });
+
+    reverseToggle.addEventListener('change', (e) => {
+      reverseDirection = e.target.checked;
+      // Re-distribute digits so the tunnel fills in immediately
+      for (let i = 0; i < digits.length; i++) {
+        initDigit(digits[i], true);
+        // Evenly spread z so both directions start with a full tunnel
+        digits[i].z = (i / digits.length) * maxZ;
       }
     });
 
@@ -377,7 +399,13 @@
     }
 
     function initDigit(d, isInit = false) {
-      d.z = isInit ? Math.random() * maxZ : maxZ;
+      if (reverseDirection) {
+        // In reverse mode, digits start near the viewer and move away
+        d.z = isInit ? Math.random() * maxZ : 12;
+      } else {
+        // Normal mode: digits start far and move toward the viewer
+        d.z = isInit ? Math.random() * maxZ : maxZ;
+      }
       // Position relative to screen dimensions to ensure uniform distribution
       d.x = (Math.random() - 0.5) * W * 3.5;
       d.y = (Math.random() - 0.5) * H * 3.5;
@@ -463,8 +491,12 @@
       const dh_gm = baseH + glowMargin * 2;
 
       for (const d of digits) {
-        // Move towards viewer
-        d.z -= d.speed * dt * speedMultiplier;
+        // Move towards or away from viewer based on direction
+        if (reverseDirection) {
+          d.z += d.speed * dt * speedMultiplier;
+        } else {
+          d.z -= d.speed * dt * speedMultiplier;
+        }
         
         // Randomly update digits value
         if (now >= d.nextChange) {
@@ -472,8 +504,8 @@
           d.nextChange = now + d.period;
         }
 
-        // Reset if passed viewer
-        if (d.z <= 12) {
+        // Reset if passed the boundary
+        if (reverseDirection ? d.z >= maxZ : d.z <= 12) {
           initDigit(d);
           continue;
         }
@@ -495,12 +527,22 @@
           continue;
         }
 
-        // Calculate opacity based on Z depth (fade in from back, fade out at front)
+        // Calculate opacity based on Z depth
         let alpha = 1.0;
-        if (d.z > maxZ * 0.8) {
-          alpha = (maxZ - d.z) / (maxZ * 0.2); // Fade in at depth
-        } else if (d.z < 200) {
-          alpha = (d.z - 12) / 188; // Fade out near screen
+        if (reverseDirection) {
+          // Reverse: fade in near viewer (small z), fade out at back (large z)
+          if (d.z < 200) {
+            alpha = (d.z - 12) / 188; // Fade in at front
+          } else if (d.z > maxZ * 0.8) {
+            alpha = (maxZ - d.z) / (maxZ * 0.2); // Fade out at depth
+          }
+        } else {
+          // Normal: fade in from back, fade out at front
+          if (d.z > maxZ * 0.8) {
+            alpha = (maxZ - d.z) / (maxZ * 0.2); // Fade in at depth
+          } else if (d.z < 200) {
+            alpha = (d.z - 12) / 188; // Fade out near screen
+          }
         }
         alpha = Math.max(0, Math.min(1, alpha));
 
