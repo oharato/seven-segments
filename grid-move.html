@@ -262,12 +262,11 @@
 
     reverseToggle.addEventListener('change', (e) => {
       reverseDirection = e.target.checked;
-      // Re-distribute digits so the reversed tunnel fills in immediately
+      // Re-distribute digits so the tunnel fills in immediately
       for (let i = 0; i < digits.length; i++) {
         initDigit(digits[i], true);
-        digits[i].z = reverseDirection
-          ? (i / digits.length) * maxZ
-          : (i / digits.length) * maxZ;
+        // Evenly spread z so both directions start with a full tunnel
+        digits[i].z = (i / digits.length) * maxZ;
       }
     });
 
