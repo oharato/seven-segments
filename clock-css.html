@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>CSS Digital Clock & Timer</title>
+<link rel="stylesheet" href="digit.css">
+<style>
+  :root { color-scheme: dark; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: radial-gradient(ellipse 80% 60% at 50% 30%, #1a1a20 0%, #0a0a0d 70%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 30px;
+    font-family: -apple-system, system-ui, "Segoe UI", sans-serif;
+  }
+
+  /* Control Panel */
+  .controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 16px 24px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+
+  .control-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .control-title {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: rgba(255, 255, 255, 0.4);
+    margin-right: 5px;
+  }
+
+  /* Radio Styling */
+  input[type="radio"] {
+    display: none;
+  }
+
+  label {
+    padding: 6px 12px;
+    font-size: 13px;
+    border-radius: 6px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.6);
+    transition: all 0.2s ease;
+  }
+
+  label:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+  }
+
+  /* Checked states for Mode Selector */
+  #mode-realtime:checked ~ .controls label[for="mode-realtime"],
+  #mode-timer:checked ~ .controls label[for="mode-timer"] {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: #fff;
+    font-weight: 500;
+  }
+
+  /* Checked states for Color Selector */
+  #theme-amber:checked ~ .controls label[for="theme-amber"] { background: rgba(255, 176, 32, 0.2); border-color: rgba(255, 176, 32, 0.4); color: #ffb020; }
+  #theme-cyan:checked ~ .controls label[for="theme-cyan"] { background: rgba(32, 212, 255, 0.2); border-color: rgba(32, 212, 255, 0.4); color: #20d4ff; }
+  #theme-green:checked ~ .controls label[for="theme-green"] { background: rgba(63, 255, 112, 0.2); border-color: rgba(63, 255, 112, 0.4); color: #3fff70; }
+  #theme-ice:checked ~ .controls label[for="theme-ice"] { background: rgba(232, 246, 255, 0.2); border-color: rgba(232, 246, 255, 0.4); color: #e8f6ff; }
+
+  /* Theme color overrides on .digit elements inside #clock */
+  #theme-amber:checked ~ #clock .digit {
+    --on: #ffb020;
+    --off: rgba(255, 176, 32, .05);
+    --glow-1: rgba(255, 176, 32, .55);
+    --glow-2: rgba(255, 140, 0, .3);
+  }
+  #theme-cyan:checked ~ #clock .digit {
+    --on: #20d4ff;
+    --off: rgba(32, 212, 255, .05);
+    --glow-1: rgba(32, 212, 255, .55);
+    --glow-2: rgba(0, 180, 255, .3);
+  }
+  #theme-green:checked ~ #clock .digit {
+    --on: #3fff70;
+    --off: rgba(63, 255, 112, .05);
+    --glow-1: rgba(63, 255, 112, .5);
+    --glow-2: rgba(40, 255, 80, .25);
+  }
+  #theme-ice:checked ~ #clock .digit {
+    --on: #e8f6ff;
+    --off: rgba(232, 246, 255, .05);
+    --glow-1: rgba(180, 220, 255, .55);
+    --glow-2: rgba(120, 180, 255, .3);
+  }
+
+  /* Apply theme overrides to colons inside #clock */
+  #theme-amber:checked ~ #clock .colon { --on:#ffb020; --glow-1:rgba(255,176,32,.55); --glow-2:rgba(255,140,0,.3); }
+  #theme-cyan:checked ~ #clock .colon  { --on:#20d4ff; --glow-1:rgba(32,212,255,.55); --glow-2:rgba(0,180,255,.3); }
+  #theme-green:checked ~ #clock .colon { --on:#3fff70; --glow-1:rgba(63,255,112,.5);  --glow-2:rgba(40,255,80,.25); }
+  #theme-ice:checked ~ #clock .colon   { --on:#e8f6ff; --glow-1:rgba(180,220,255,.55);--glow-2:rgba(120,180,255,.3); }
+
+  /* Mode overriding: If timer is checked, set all delays to 0 */
+  #mode-timer:checked ~ #clock {
+    --hours-delay: 0 !important;
+    --minutes-delay: 0 !important;
+    --seconds-delay: 0 !important;
+  }
+
+  /* Display layout */
+  .display {
+    display: inline-flex;
+    align-items: center;
+    padding: 28px 36px;
+    background: linear-gradient(180deg, #18181d 0%, #08080b 100%);
+    border-radius: 16px;
+    box-shadow:
+      inset 0 1px 0   rgba(255,255,255,.05),
+      inset 0 0 0 1px rgba(255,255,255,.02),
+      inset 0 -2px 10px rgba(0,0,0,.7),
+      0 16px 40px -10px rgba(0,0,0,.6);
+  }
+
+  /* Keyframe Animations */
+  @keyframes cycle-10s {
+    0% { --a: var(--on); --b: var(--on); --c: var(--on); --d: var(--on); --e: var(--on); --f: var(--on); --g: var(--off); } /* 0 */
+    10% { --a: var(--off); --b: var(--on); --c: var(--on); --d: var(--off); --e: var(--off); --f: var(--off); --g: var(--off); } /* 1 */
+    20% { --a: var(--on); --b: var(--on); --c: var(--off); --d: var(--on); --e: var(--on); --f: var(--off); --g: var(--on); } /* 2 */
+    30% { --a: var(--on); --b: var(--on); --c: var(--on); --d: var(--on); --e: var(--off); --f: var(--off); --g: var(--on); } /* 3 */
+    40% { --a: var(--off); --b: var(--on); --c: var(--on); --d: var(--off); --e: var(--off); --f: var(--on); --g: var(--on); } /* 4 */
+    50% { --a: var(--on); --b: var(--off); --c: var(--on); --d: var(--on); --e: var(--off); --f: var(--on); --g: var(--on); } /* 5 */
+    60% { --a: var(--on); --b: var(--off); --c: var(--on); --d: var(--on); --e: var(--on); --f: var(--on); --g: var(--on); } /* 6 */
+    70% { --a: var(--on); --b: var(--on); --c: var(--on); --d: var(--off); --e: var(--off); --f: var(--off); --g: var(--off); } /* 7 */
+    80% { --a: var(--on); --b: var(--on); --c: var(--on); --d: var(--on); --e: var(--on); --f: var(--on); --g: var(--on); } /* 8 */
+    90% { --a: var(--on); --b: var(--on); --c: var(--on); --d: var(--on); --e: var(--off); --f: var(--on); --g: var(--on); } /* 9 */
+  }
+
+  @keyframes cycle-60s {
+    0% { --a: var(--on); --b: var(--on); --c: var(--on); --d: var(--on); --e: var(--on); --f: var(--on); --g: var(--off); } /* 0 */
+    16.6667% { --a: var(--off); --b: var(--on); --c: var(--on); --d: var(--off); --e: var(--off); --f: var(--off); --g: var(--off); } /* 1 */
+    33.3333% { --a: var(--on); --b: var(--on); --c: var(--off); --d: var(--on); --e: var(--on); --f: var(--off); --g: var(--on); } /* 2 */
+    50% { --a: var(--on); --b: var(--on); --c: var(--on); --d: var(--on); --e: var(--off); --f: var(--off); --g: var(--on); } /* 3 */
+    66.6667% { --a: var(--off); --b: var(--on); --c: var(--on); --d: var(--off); --e: var(--off); --f: var(--on); --g: var(--on); } /* 4 */
+    83.3333% { --a: var(--on); --b: var(--off); --c: var(--on); --d: var(--on); --e: var(--off); --f: var(--on); --g: var(--on); } /* 5 */
+  }
+
+  @keyframes cycle-hours-tens {
+    0% { --a: var(--on); --b: var(--on); --c: var(--on); --d: var(--on); --e: var(--on); --f: var(--on); --g: var(--off); } /* 0 */
+    41.6667% { --a: var(--off); --b: var(--on); --c: var(--on); --d: var(--off); --e: var(--off); --f: var(--off); --g: var(--off); } /* 1 */
+    83.3333% { --a: var(--on); --b: var(--on); --c: var(--off); --d: var(--on); --e: var(--on); --f: var(--off); --g: var(--on); } /* 2 */
+  }
+
+  @keyframes cycle-hours-units {
+    0% { --a: var(--on); --b: var(--on); --c: var(--on); --d: var(--on); --e: var(--on); --f: var(--on); --g: var(--off); } /* 0 */
+    4.1667% { --a: var(--off); --b: var(--on); --c: var(--on); --d: var(--off); --e: var(--off); --f: var(--off); --g: var(--off); } /* 1 */
+    8.3333% { --a: var(--on); --b: var(--on); --c: var(--off); --d: var(--on); --e: var(--on); --f: var(--off); --g: var(--on); } /* 2 */
+    12.5% { --a: var(--on); --b: var(--on); --c: var(--on); --d: var(--on); --e: var(--off); --f: var(--off); --g: var(--on); } /* 3 */
+    16.6667% { --a: var(--off); --b: var(--on); --c: var(--on); --d: var(--off); --e: var(--off); --f: var(--on); --g: var(--on); } /* 4 */
+    20.8333% { --a: var(--on); --b: var(--off); --c: var(--on); --d: var(--on); --e: var(--off); --f: var(--on); --g: var(--on); } /* 5 */
+    25% { --a: var(--on); --b: var(--off); --c: var(--on); --d: var(--on); --e: var(--on); --f: var(--on); --g: var(--on); } /* 6 */
+    29.1667% { --a: var(--on); --b: var(--on); --c: var(--on); --d: var(--off); --e: var(--off); --f: var(--off); --g: var(--off); } /* 7 */
+    33.3333% { --a: var(--on); --b: var(--on); --c: var(--on); --d: var(--on); --e: var(--on); --f: var(--on); --g: var(--on); } /* 8 */
+    37.5% { --a: var(--on); --b: var(--on); --c: var(--on); --d: var(--on); --e: var(--off); --f: var(--on); --g: var(--on); } /* 9 */
+    41.6667% { --a: var(--on); --b: var(--on); --c: var(--on); --d: var(--on); --e: var(--on); --f: var(--on); --g: var(--off); } /* 0 */
+    45.8333% { --a: var(--off); --b: var(--on); --c: var(--on); --d: var(--off); --e: var(--off); --f: var(--off); --g: var(--off); } /* 1 */
+    50% { --a: var(--on); --b: var(--on); --c: var(--off); --d: var(--on); --e: var(--on); --f: var(--off); --g: var(--on); } /* 2 */
+    54.1667% { --a: var(--on); --b: var(--on); --c: var(--on); --d: var(--on); --e: var(--off); --f: var(--off); --g: var(--on); } /* 3 */
+    58.3333% { --a: var(--off); --b: var(--on); --c: var(--on); --d: var(--off); --e: var(--off); --f: var(--on); --g: var(--on); } /* 4 */
+    62.5% { --a: var(--on); --b: var(--off); --c: var(--on); --d: var(--on); --e: var(--off); --f: var(--on); --g: var(--on); } /* 5 */
+    66.6667% { --a: var(--on); --b: var(--off); --c: var(--on); --d: var(--on); --e: var(--on); --f: var(--on); --g: var(--on); } /* 6 */
+    70.8333% { --a: var(--on); --b: var(--on); --c: var(--on); --d: var(--off); --e: var(--off); --f: var(--off); --g: var(--off); } /* 7 */
+    75% { --a: var(--on); --b: var(--on); --c: var(--on); --d: var(--on); --e: var(--on); --f: var(--on); --g: var(--on); } /* 8 */
+    79.1667% { --a: var(--on); --b: var(--on); --c: var(--on); --d: var(--on); --e: var(--off); --f: var(--on); --g: var(--on); } /* 9 */
+    83.3333% { --a: var(--on); --b: var(--on); --c: var(--on); --d: var(--on); --e: var(--on); --f: var(--on); --g: var(--off); } /* 0 */
+    87.5% { --a: var(--off); --b: var(--on); --c: var(--on); --d: var(--off); --e: var(--off); --f: var(--off); --g: var(--off); } /* 1 */
+    91.6667% { --a: var(--on); --b: var(--on); --c: var(--off); --d: var(--on); --e: var(--on); --f: var(--off); --g: var(--on); } /* 2 */
+    95.8333% { --a: var(--on); --b: var(--on); --c: var(--on); --d: var(--on); --e: var(--off); --f: var(--off); --g: var(--on); } /* 3 */
+  }
+
+  /* Apply animations and delays */
+  .digit-h2 {
+    animation: cycle-hours-tens 86400s infinite step-end;
+    animation-delay: calc(var(--hours-delay, 0) * -1s);
+  }
+  .digit-h1 {
+    animation: cycle-hours-units 86400s infinite step-end;
+    animation-delay: calc(var(--hours-delay, 0) * -1s);
+  }
+  .digit-m2 {
+    animation: cycle-60s 3600s infinite step-end;
+    animation-delay: calc(var(--minutes-delay, 0) * -1s);
+  }
+  .digit-m1 {
+    animation: cycle-10s 600s infinite step-end;
+    animation-delay: calc(var(--minutes-delay, 0) * -1s);
+  }
+  .digit-s2 {
+    animation: cycle-60s 60s infinite step-end;
+    animation-delay: calc(var(--seconds-delay, 0) * -1s);
+  }
+  .digit-s1 {
+    animation: cycle-10s 10s infinite step-end;
+    animation-delay: calc(var(--seconds-delay, 0) * -1s);
+  }
+
+  /* Description and Info panel */
+  .info-panel {
+    max-width: 600px;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 14px;
+    line-height: 1.6;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 24px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  }
+
+  .info-panel h3 {
+    margin-top: 0;
+    color: #fff;
+    font-size: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 8px;
+  }
+
+  .info-panel ul {
+    margin: 0;
+    padding-left: 20px;
+  }
+
+  .info-panel li {
+    margin-bottom: 10px;
+  }
+
+  .info-panel code {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: Consolas, Monaco, monospace;
+    font-size: 13px;
+    color: #20d4ff;
+  }
+</style>
+</head>
+<body>
+
+  <!-- Mode & Theme selectors (placed before siblings to allow CSS selection) -->
+  <input type="radio" id="mode-realtime" name="clock-mode" checked>
+  <input type="radio" id="mode-timer" name="clock-mode">
+
+  <input type="radio" id="theme-amber" name="clock-theme" checked>
+  <input type="radio" id="theme-cyan" name="clock-theme">
+  <input type="radio" id="theme-green" name="clock-theme">
+  <input type="radio" id="theme-ice" name="clock-theme">
+
+  <!-- Control Panel -->
+  <div class="controls">
+    <div class="control-group">
+      <span class="control-title">モード:</span>
+      <label for="mode-realtime">リアルタイム時計 (JS 1回初期化)</label>
+      <label for="mode-timer">純CSSタイマー (00:00:00〜)</label>
+    </div>
+    <div class="control-group">
+      <span class="control-title">カラー:</span>
+      <label for="theme-amber">Amber</label>
+      <label for="theme-cyan">Cyan</label>
+      <label for="theme-green">Green</label>
+      <label for="theme-ice">Ice</label>
+    </div>
+  </div>
+
+  <!-- Digital Clock Display -->
+  <div class="display lg" id="clock">
+    <div class="digit digit-h2"></div><div class="digit digit-h1"></div>
+    <div class="colon blink"></div>
+    <div class="digit digit-m2"></div><div class="digit digit-m1"></div>
+    <div class="colon blink"></div>
+    <div class="digit digit-s2"></div><div class="digit digit-s1"></div>
+  </div>
+
+  <!-- Documentation Info -->
+  <div class="info-panel">
+    <h3>💡 CSSによるデジタル時計・タイマーの仕組み</h3>
+    <ul>
+      <li><strong>CSSでの数値表現:</strong> <code>@keyframes</code> アニメーションを用いて、7セグメントディスプレイの点灯パターンを示すCSS変数（<code>--a</code> 〜 <code>--g</code>）を <code>step-end</code> タイミング（補間なしの段階切り替え）で書き換えています。</li>
+      <li><strong>時間の経過:</strong> 時・分・秒の桁ごとに異なるアニメーション期間（10秒、60秒、600秒、3600秒、86400秒）を設定することで、純粋なCSSアニメーションだけで自動的にカウントアップが進みます。</li>
+      <li><strong>現在時刻の同期（リアルタイム時計モード）:</strong> CSS自体はシステム時間（何時何分か）を取得できないため、ページ読み込みの瞬間に<strong>JavaScriptで1度だけ現在時刻（秒換算）をCSS変数に設定</strong>し、負の <code>animation-delay</code>（例: <code>-45600s</code>）として適用しています。これ以降、アニメーションはCSSエンジンのみで進行し、JSのループ処理は実行されません。</li>
+      <li><strong>純CSSタイマーモード:</strong> 読み込み時の時間オフセットをCSS側で <code>0</code> に上書きすることで、JavaScriptを一切使用せずページ表示からカウントを進める 100% 純CSSのタイマーとして動作します。</li>
+    </ul>
+  </div>
+
+<script>
+  // ページロード時に1回だけ実行し、現在時刻から算出したオフセット秒数をCSS変数に注入する
+  const updateSystemTimeOffset = () => {
+    const now = new Date();
+    const h = now.getHours();
+    const m = now.getMinutes();
+    const s = now.getSeconds();
+
+    const clock = document.getElementById('clock');
+    clock.style.setProperty('--hours-delay', h * 3600 + m * 60 + s);
+    clock.style.setProperty('--minutes-delay', m * 60 + s);
+    clock.style.setProperty('--seconds-delay', s);
+  };
+  updateSystemTimeOffset();
+</script>
+</body>
+</html>
